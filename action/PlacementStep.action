@@ -1,0 +1,18 @@
+# Service to execute a placement step. Note that this
+# is not a stable definition and will change
+# in the future
+
+#goal definition
+ibvs_object_placement/PlacementCommand data
+industrial_payload_manager/ArucoGridboard camera1ground
+industrial_payload_manager/ArucoGridboard camera1place
+industrial_payload_manager/ArucoGridboard camera2ground
+industrial_payload_manager/ArucoGridboard camera2place
+---
+#result definition
+string state
+
+---
+#feedback
+string error_msg
+
