@@ -53,6 +53,8 @@ find_package(catkin REQUIRED COMPONENTS
  add_message_files(
    FILES
    PlacementCommand.msg
+   ComplianceControlParameters.msg
+   IBVSParameters.msg
 #   Message2.msg
  )
 
@@ -73,7 +75,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
-   moveit_msgs   std_msgs geometry_msgs actionlib_msgs
+   moveit_msgs std_msgs geometry_msgs actionlib_msgs industrial_payload_manager
  )
 
 ################################################

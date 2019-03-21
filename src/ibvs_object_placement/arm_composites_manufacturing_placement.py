@@ -114,7 +114,7 @@ class ObjectRecognitionCommander(object):
         
 class PlacementController(object):
 
-    def __init__(self, Panel=2):
+    def __init__(self):
 
         #Subscribe to controller_state 
         self.controller_state_sub = rospy.Subscriber("controller_state", controllerstate, self.callback)
@@ -138,50 +138,15 @@ class PlacementController(object):
         self.ros_gripper_2_trigger = rospy.ServiceProxy('/gripper_camera_2/trigger', Trigger)
         
         # --- Camera parameters
-        self.CamParam = CameraParams(2283.391289766133, 1192.255485086403, 2279.484382094687, 1021.399092147012, 1.0, -0.022101211408596, -0.095163053709332, -0.003986991791212,  -0.003479613658352, 0.179926705467534)
+        self.CamParam = None
         # --- Camera pose
         R_Jcam = np.array([[0.9995,-0.0187,-0.0263],[-0.0191,-0.9997,-0.0135],[-0.0261,0.0140,-0.9996]])
         r_cam = rox.hat(np.array([0.0707, 1.1395, 0.2747]))#rox.hat(np.array([- 0.2811, -1.1397,0.0335]))#rox.hat(np.array([- 0.2811, 1.1397,0.0335]))
         self.R_Jcam = np.linalg.inv(np.vstack([ np.hstack([R_Jcam,np.zeros([3,3])]), np.hstack([np.dot(r_cam,R_Jcam),R_Jcam]) ]))
-        self.dt = 0.1
+        self.dt = None
         self.iteration=0
         
-        self.Panel=Panel
-        
-        
-        if  self.Panel == 1:    
-            # --- Aruco board info     
-            self.id_start_ground = 32
-            self.id_board_row_ground = 4
-            self.id_board_col_ground = 4
-            self.tag_ground_size = .04
-            self.board_panel = cv2.aruco.GridBoard_create(8, 3, .025, .0075, self.aruco_dict, 80)
-            # --- Load object points ground tag in panel tag coordinate system from mat file
-            self.loaded_object_points_ground_in_panel_system_stage_2 = loadmat('/home/rpi-cats/Desktop/DJ/Ideal Position/Panel1_Cam_636_object_points_ground_tag_in_panel_frame_In_Nest.mat')['object_points_ground_in_panel_tag_system']    
-            # --- Load ideal pose differnece information from file
-            self.loaded_rvec_difference_stage1 = loadmat('/home/rpi-cats/Desktop/DJ/Ideal Position/Panel1_Cam_636_object_points_ground_tag_in_panel_frame_Above_Nest.mat')['rvec_difference']
-            self.loaded_tvec_difference_stage1 = loadmat('/home/rpi-cats/Desktop/DJ/Ideal Position/Panel1_Cam_636_object_points_ground_tag_in_panel_frame_Above_Nest.mat')['tvec_difference']
-            self.loaded_tvec_difference_stage1[1]+=0.03
-            # --- Load ideal pose differnece information from file
-            self.loaded_rvec_difference = loadmat('/home/rpi-cats/Desktop/DJ/Ideal Position/Panel1_Cam_636_object_points_ground_tag_in_panel_frame_In_Nest.mat')['rvec_difference']
-            self.loaded_tvec_difference = loadmat('/home/rpi-cats/Desktop/DJ/Ideal Position/Panel1_Cam_636_object_points_ground_tag_in_panel_frame_In_Nest.mat')['tvec_difference']
-        else:
-            # --- Aruco board info     
-            self.id_start_ground = 16
-            self.id_board_row_ground = 4
-            self.id_board_col_ground = 4
-            self.tag_ground_size = .04        
-            self.board_panel = cv2.aruco.GridBoard_create(8, 3, .025, .0075, self.aruco_dict, 50)
-            # --- Load object points ground tag in panel tag coordinate system from mat file
-            self.loaded_object_points_ground_in_panel_system_stage_2 = loadmat('/home/rpi-cats/Desktop/YC/Placement Calibration/Panel2_Cam_636_object_points_ground_tag_in_panel_frame_In_Nest.mat')['object_points_ground_in_panel_tag_system']    
-            # --- Load ideal pose differnece information from file
-            self.loaded_rvec_difference_stage1 = loadmat('/home/rpi-cats/Desktop/DJ/Ideal Position/Panel2_Cam_636_object_points_ground_tag_in_panel_frame_Offset_In_Nest.mat')['rvec_difference']
-            self.loaded_tvec_difference_stage1 = loadmat('/home/rpi-cats/Desktop/DJ/Ideal Position/Panel2_Cam_636_object_points_ground_tag_in_panel_frame_Offset_In_Nest.mat')['tvec_difference']
-            # --- Load ideal pose differnece information from file
-            self.loaded_rvec_difference = loadmat('/home/rpi-cats/Desktop/YC/Placement Calibration/Panel2_Cam_636_object_points_ground_tag_in_panel_frame_In_Nest.mat')['rvec_difference']
-            self.loaded_tvec_difference = loadmat('/home/rpi-cats/Desktop/YC/Placement Calibration/Panel2_Cam_636_object_points_ground_tag_in_panel_frame_In_Nest.mat')['tvec_difference']
-        self.board_ground = cv2.aruco.GridBoard_create(self.id_board_row_ground, self.id_board_col_ground, 
-                                                       self.tag_ground_size, .0075, self.aruco_dict, self.id_start_ground)
+        self.board_ground = None
         # functions like a gain, used with velocity to track position
         self.FTdata = None
         self.ft_flag = False
@@ -190,14 +155,14 @@ class PlacementController(object):
         self.result = self.take_image()
         self.client = actionlib.SimpleActionClient("joint_trajectory_action", FollowJointTrajectoryAction)
         # IBVS parameters
-        self.du_converge_TH = 3
-        self.dv_converge_TH = 3
-        self.iteration_limit = 70
-        self.Ki = 1.0   
+        self.du_converge_TH = None
+        self.dv_converge_TH = None
+        self.iteration_limit = None
+        self.Ki = None   
         # Compliance controller parameters
-        self.F_d_set1 = -200
-        self.F_d_set2 = -360
-        self.Kc = 0.00025
+        self.F_d_set1 = None
+        self.F_d_set2 = None
+        self.Kc = None
         self.ros_data=None
         self.camMatrix=None
         self.distCoeffs=None
@@ -209,10 +174,10 @@ class PlacementController(object):
         self.distCoeffs=np.array(ros_data.D)
         if len(self.distCoeffs) < 4:
             self.distCoeffs=np.array([[0,0,0,0,0]])
-        self.CamParam=self.set_camera_params
+        self.CamParam=self.set_camera_params()
         
     def set_camera_params(self):
-        return self.camMatrix,distCoeff
+        return self.camMatrix,self.distCoeffs
             
             
     def callback(self, data):
@@ -431,21 +396,16 @@ class PlacementController(object):
         
     
     def move_to_initial_pose(self):
-        if self.Panel == 1:
-            tran0 = np.array([2.15484,1.21372,0.25766])
-            rot0 = rox.q2R([0.02110, -0.03317, 0.99922, -0.00468])     
-        else:
-            tran0 = np.array([2.20775354978,-1.08835759918,0.467008345754])
-            rot0 = rox.q2R([0.0360399909458, -0.0155318641364, 0.999181449999, -0.00981377740413])        
+                
         #Set controller command mode
         self.controller_commander.set_controller_mode(self.controller_commander.MODE_AUTO_TRAJECTORY, 0.4, [],[])
         time.sleep(0.5)
         
         #open loop set the initial pose to the end pose in the transport path
-        pose_target2 = rox.Transform(rot0, tran0)        
+        #pose_target2 = rox.Transform(rot0, tran0)        
         ##Execute movement to set location
         rospy.loginfo("Executing initial path ====================")
-        self.controller_commander.compute_cartesian_path_and_move(pose_target2, avoid_collisions=False)
+        self.controller_commander.compute_cartesian_path_and_move(self.initial_pose, avoid_collisions=False)
     
     def pbvs_to_stage1(self):
         
@@ -664,7 +624,7 @@ class PlacementController(object):
         rospy.loginfo("iteration: %f",self.iteration)
         
         def single_camera_placement(data,camera_1_ground,camera_1_place):
-            self.dt = data.IBVSdt
+            self.dt = data.ibvs_parameters.IBVSdt
             self.iteration=0
             self.board_panel = cv2.aruco.GridBoard_create(camera_1_place.markersX, camera_1_place.markersY, camera_1_place.markerLength, camera_1_place.markerSpacing, camera_1_place.dictionary, camera_1_place.firstMarker)
             self.board_ground = cv2.aruco.GridBoard_create(camera_1_ground.markersX, camera_1_ground.markersY, camera_1_ground.markerLength, camera_1_ground.markerSpacing, camera_1_ground.dictionary, camera_1_ground.firstMarker)
@@ -676,20 +636,20 @@ class PlacementController(object):
             self.loaded_tvec_difference_stage1[1]+=0.03
             # --- Load ideal pose differnece information from file
             self.loaded_rvec_difference = data.rvec_difference_stage2
-            self.loaded_tvec_difference = data.rvec_difference_stage2
+            self.loaded_tvec_difference = data.tvec_difference_stage2
             
-            self.du_converge_TH = data.du_converge_th
-            self.dv_converge_TH = data.dv_converge_th
-            self.iteration_limit = data.iteration_limit
-            self.Ki = data.Ki
+            self.du_converge_TH = data.ibvs_parameters.du_converge_th
+            self.dv_converge_TH = data.ibvs_parameters.dv_converge_th
+            self.iteration_limit = data.ibvs_parameters.iteration_limit
+            self.Ki = data.ibvs_parameters.Ki
             # Compliance controller parameters
-            self.F_d_set1 = data.F_d_set1
-            self.F_d_set2 = data.F_d_set2
-            self.Kc = data.Kc
-            
+            self.F_d_set1 = data.compliance_control_parameters.F_d_set1
+            self.F_d_set2 = data.compliance_control_parameters.F_d_set2
+            self.Kc = data.compliance_control_parameters.Kc
+            self.initial_pose=data.initial
             #self.tran0 = np.array([2.15484,1.21372,0.25766])
             #self.rot0 = rox.q2R([0.02110, -0.03317, 0.99922, -0.00468])
-            self.step_size_min = data.step_size_min
+            self.step_size_min = data.ibvs_parameters.step_size_min
             self.move_to_initial_pose()
             self.pbvs_to_stage1()
             self.ibvs_placement()
@@ -703,7 +663,7 @@ class PlacementController(object):
             
             
         def two_camera_placement(data,camera_1_ground,camera_1_place,camera_2_ground,camera_2_place):
-            self.dt = data.IBVSdt
+            self.dt = data.ibvs_parameters.IBVSdt
             self.iteration=0
             self.board_panel = cv2.aruco.GridBoard_create(camera_1_place.markersX, camera_1_place.markersY, camera_1_place.markerLength, camera_1_place.markerSpacing, camera_1_place.dictionary, camera_1_place.firstMarker)
             self.board_ground = cv2.aruco.GridBoard_create(camera_1_ground.markersX, camera_1_ground.markersY, camera_1_ground.markerLength, camera_1_ground.markerSpacing, camera_1_ground.dictionary, camera_1_ground.firstMarker)
@@ -716,20 +676,20 @@ class PlacementController(object):
             self.loaded_tvec_difference_stage1[1]+=0.03
             # --- Load ideal pose differnece information from file
             self.loaded_rvec_difference = data.rvec_difference_stage2
-            self.loaded_tvec_difference = data.rvec_difference_stage2
+            self.loaded_tvec_difference = data.tvec_difference_stage2
             
-            self.du_converge_TH = data.du_converge_th
-            self.dv_converge_TH = data.dv_converge_th
-            self.iteration_limit = data.iteration_limit
-            self.Ki = data.Ki
+            self.du_converge_TH = data.ibvs_parameters.du_converge_th
+            self.dv_converge_TH = data.ibvs_parameters.dv_converge_th
+            self.iteration_limit = data.ibvs_parameters.iteration_limit
+            self.Ki = data.ibvs_parameters.Ki
             # Compliance controller parameters
-            self.F_d_set1 = data.F_d_set1
-            self.F_d_set2 = data.F_d_set2
-            self.Kc = data.Kc
-            
+            self.F_d_set1 = data.compliance_control_parameters.F_d_set1
+            self.F_d_set2 = data.compliance_control_parameters.F_d_set2
+            self.Kc = data.compliance_control_parameters.Kc
+            self.initial_pose=data.initial
             #self.tran0 = np.array([2.15484,1.21372,0.25766])
             #self.rot0 = rox.q2R([0.02110, -0.03317, 0.99922, -0.00468])
-            self.step_size_min = data.step_size_min
+            self.step_size_min = data.ibvs_parameters.step_size_min
             self.move_to_initial_pose()
             #self.pbvs_to_stage1()
             #self.ibvs_placement()
