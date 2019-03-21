@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 #TODO: import placement controller class like shown in next line
 from .arm_composites_manufacturing_placement import PlacementController
-from rpi_arm_composites_manufacturing_process.msg import ProcessStepAction, ProcessStepResult
+from ibvs_object_placement.msg import PlacementStepAction, PlacementStepResult,PlacementStepFeedback
 import actionlib
 import rospy
 
@@ -25,7 +25,7 @@ class PlacementControllerServer(object):
         camera_1_place= goal.get_goal().camera1place
         self.controller.goal_handle=goal
         self.previous_goal=goal
-        if data.cameras_used == 2:
+        if len(data.cameras) == 2:
             camera_2_ground= goal.get_goal().camera2ground
             camera_2_place=goal.get_goal().camera2place
             self.controller.two_camera_placement(data,camera1ground,camera1place,camera2ground,camera2place)
@@ -35,7 +35,7 @@ class PlacementControllerServer(object):
             
         rospy.loginfo(goal.get_goal_status())
         
-        res = ProcessStepResult()
+        res = PlacementStepResult()
         res.state=self.controller.state
         res.target=self.controller.current_target if self.controller.current_target is not None else ""
         res.payload=self.controller.current_payload if self.controller.current_payload is not None else ""
