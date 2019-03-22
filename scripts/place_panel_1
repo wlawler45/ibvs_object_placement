@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
-from ibvs_object_placement import PlacementController
+#from .arm_composites_manufacturing_placement import PlacementController
 import rospy
 import time
 import actionlib
+import cv2
+import cv2.aruco as aruco
 from geometry_msgs.msg import Pose, Point, Vector3
-from ivbs_object_placement.msg PlacementStepAction, PlacementStepGoal, PlacementCommand, IBVSParameters, ComplianceControlParameters
+from ibvs_object_placement.msg import PlacementStepAction, PlacementStepGoal, PlacementCommand, IBVSParameters, ComplianceControlParameters
 from scipy.io import loadmat
 from industrial_payload_manager.msg import ArucoGridboard
 
@@ -21,8 +23,9 @@ def main():
     placement_command=PlacementCommand()
     compliance_control=ComplianceControlParameters()
     ibvs_params=IBVSParameters()
-    placement_command.cameras_used=["gripper_camera_2"]
-    
+    #make sure command.cameras
+    placement_command.cameras=["gripper_camera_2"]
+    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_ARUCO_ORIGINAL)
     compliance_control.F_d_set1=-200
     compliance_control.F_d_set2=-360
     compliance_control.Kc=0.00025
@@ -35,7 +38,7 @@ def main():
     ibvs_params.step_size_min=100000
     placement_command.ibvs_parameters=ibvs_params
     placement_goal=PlacementStepGoal()
-    def wrap_vector3(self,data):
+    def wrap_vector3(data):
         vector=Vector3()
         vector.x=data[0]
         vector.y=data[1]
@@ -43,10 +46,10 @@ def main():
         return vector
         
         
-    def wrap_points(self,point_diff):
+    def wrap_points(point_diff):
         point_array=[]
         num_points=point_diff.shape[1]
-        for(i in range(num_points)):
+        for i in range(num_points):
             point=Point()
             point.x=point_diff[0][i]
             point.y=point_diff[1][i]
@@ -70,9 +73,9 @@ def main():
     initial_place.orientation.z=-0.00468
     placement_command.initial=initial_place
     
-    placement_goal.camera1ground=ArucoGridboard(4,4,0.04,0.075,self.aruco_dict,32)
-    placement_goal.camera1place=ArucoGridboard(8,3,0.025,0.075,self.aruco_dict,80)
-     '''   
+    placement_goal.camera1ground=ArucoGridboard(4,4,0.04,0.075,str(aruco_dict),32)
+    placement_goal.camera1place=ArucoGridboard(8,3,0.025,0.075,str(aruco_dict),80)
+    '''   
     elif(self.current_payload=="leeward_tip_panel"):
         placement_command.rvec_difference_stage1=wrap_vector3(loadmat('/home/rpi-cats/Desktop/DJ/Ideal Position/Panel2_Cam_636_object_points_ground_tag_in_panel_frame_Offset_In_Nest.mat')['rvec_difference'])
         placement_command.tvec_difference_stage1=wrap_vector3(loadmat('/home/rpi-cats/Desktop/DJ/Ideal Position/Panel2_Cam_636_object_points_ground_tag_in_panel_frame_Offset_In_Nest.mat')['tvec_difference'])

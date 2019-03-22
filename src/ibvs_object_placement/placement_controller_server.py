@@ -28,9 +28,9 @@ class PlacementControllerServer(object):
         if len(data.cameras) == 2:
             camera_2_ground= goal.get_goal().camera2ground
             camera_2_place=goal.get_goal().camera2place
-            self.controller.two_camera_placement(data,camera1ground,camera1place,camera2ground,camera2place)
+            self.controller.two_camera_placement(data,camera_1_ground,camera_1_place,camera_2_ground,camera_2_place)
         else:
-            self.controller.single_camera_placement(data,camera1ground,camera1place)
+            self.controller.single_camera_placement(data,camera_1_ground,camera_1_place)
         
             
         rospy.loginfo(goal.get_goal_status())

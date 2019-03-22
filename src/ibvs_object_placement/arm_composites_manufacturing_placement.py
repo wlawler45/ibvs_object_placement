@@ -80,9 +80,10 @@ from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryG
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
 class CameraParams:
-    def __init__(self,M00,M02,M11,M12,M22,C00,C01,C02,C03,C04):
-        self.camMatrix, self.distCoeff = self.CameraParams(M00,M02,M11,M12,M22,C00,C01,C02,C03,C04)
-
+    def __init__(self):
+        #self.camMatrix, self.distCoeff = self.CameraParams(M00,M02,M11,M12,M22,C00,C01,C02,C03,C04)
+        self.camMatrix=None
+        self.distCoeff=None
 
     def CameraParams(self, M00,M02,M11,M12,M22,C00,C01,C02,C03,C04):
         camMatrix = np.zeros((3, 3),dtype=np.float64)
@@ -120,8 +121,8 @@ class PlacementController(object):
         self.controller_state_sub = rospy.Subscriber("controller_state", controllerstate, self.callback)
         self.last_ros_image_stamp = rospy.Time(0)
         self.goal_handle=None
-        self.process_client.wait_for_server()
-        self.process_state_pub = rospy.Publisher("GUI_state", ProcessState, queue_size=100, latch=True)        
+        
+               
         self.listener = PayloadTransformListener()
         self.rapid_node = rapid_node_pkg.RAPIDCommander()
         self.controller_commander = controller_commander_pkg.ControllerCommander()
@@ -138,7 +139,7 @@ class PlacementController(object):
         self.ros_gripper_2_trigger = rospy.ServiceProxy('/gripper_camera_2/trigger', Trigger)
         
         # --- Camera parameters
-        self.CamParam = None
+        self.CamParam = CameraParams()
         # --- Camera pose
         R_Jcam = np.array([[0.9995,-0.0187,-0.0263],[-0.0191,-0.9997,-0.0135],[-0.0261,0.0140,-0.9996]])
         r_cam = rox.hat(np.array([0.0707, 1.1395, 0.2747]))#rox.hat(np.array([- 0.2811, -1.1397,0.0335]))#rox.hat(np.array([- 0.2811, 1.1397,0.0335]))
@@ -150,8 +151,8 @@ class PlacementController(object):
         # functions like a gain, used with velocity to track position
         self.FTdata = None
         self.ft_flag = False
-        self.FTdata_0 = self.FTdata
-        self.FTdata_0est = self.compute_ft_est()
+        #self.FTdata_0 = self.FTdata
+        #self.FTdata_0est = self.compute_ft_est()
         self.result = self.take_image()
         self.client = actionlib.SimpleActionClient("joint_trajectory_action", FollowJointTrajectoryAction)
         # IBVS parameters
@@ -168,16 +169,16 @@ class PlacementController(object):
         self.distCoeffs=None
         self.ros_gripper_2_cam_info_sub=rospy.Subscriber('/gripper_camera_2/camera_info', CameraInfo, self.fill_camera_data)
 
-     def fill_camera_data(self,ros_data):
+    def fill_camera_data(self,ros_data):
         self.ros_data=ros_data
-        self.camMatrix=np.reshape(ros_data.K,(3,3))
-        self.distCoeffs=np.array(ros_data.D)
-        if len(self.distCoeffs) < 4:
-            self.distCoeffs=np.array([[0,0,0,0,0]])
-        self.CamParam=self.set_camera_params()
+        camMatrix=np.reshape(ros_data.K,(3,3))
+        distCoeffs=np.array(ros_data.D)
+        if len(distCoeffs) < 4:
+            distCoeffs=np.array([[0,0,0,0,0]])
+        self.CamParam.distCoeffs=distCoeffs
+        self.CamParam.camMatrix=camMatrix
         
-    def set_camera_params(self):
-        return self.camMatrix,self.distCoeffs
+    
             
             
     def callback(self, data):
@@ -422,10 +423,11 @@ class PlacementController(object):
         
         observed_tvec_difference = tvec_ground-tvec_panel
         observed_rvec_difference = rvec_ground-rvec_panel
+        rospy.loginfo(str(type(observed_tvec_difference)))
         rospy.loginfo("============== Difference in pose difference in nest position")
         tvec_err = self.loaded_tvec_difference_stage1-observed_tvec_difference
         rvec_err = self.loaded_rvec_difference_stage1-observed_rvec_difference 
-        rospy.loginfo("tvec difference: %f, %f, %f",tvec_err[0],tvec_err[1],tvec_err[2])
+        rospy.loginfo("tvec difference: "+str(tvec_err[0]) +" " +str(tvec_err[1])+" "+str(tvec_err[2]))
         rospy.loginfo("rvec difference: %f, %f, %f",rvec_err[0],rvec_err[1],rvec_err[2])
 
         # Adjustment
@@ -623,110 +625,137 @@ class PlacementController(object):
         rospy.loginfo("============= iteration =============")
         rospy.loginfo("iteration: %f",self.iteration)
         
-        def pointarray_to_array(self,data):
-            arr=np.empty((3,0))
-            arr_column=np.empty((3,0))
-            for( i in range(len(data)):
-                arr_column[[data.x],[data.y],[data.z]]
-                np.c_[arr,arr_column]
-            return arr
-                
-        
-        def vector3_to_array(self,data):
-            arr=np.empty(3)
-            arr[0]=data.x
-            arr[1]=data.y
-            arr[2]=data.z
-            return arr
-        
-        def single_camera_placement(data,camera_1_ground,camera_1_place):
-            try:
-                self.dt = data.ibvs_parameters.IBVSdt
-                self.iteration=0
-                self.board_panel = cv2.aruco.GridBoard_create(camera_1_place.markersX, camera_1_place.markersY, camera_1_place.markerLength, camera_1_place.markerSpacing, camera_1_place.dictionary, camera_1_place.firstMarker)
-                self.board_ground = cv2.aruco.GridBoard_create(camera_1_ground.markersX, camera_1_ground.markersY, camera_1_ground.markerLength, camera_1_ground.markerSpacing, camera_1_ground.dictionary, camera_1_ground.firstMarker)
-                
-                
-                
-                self.loaded_object_points_ground_in_panel_system_stage_2 = self.pointarray_to_array(data.point_difference_stage2)
-                # --- Load ideal pose differnece information from file
-                self.loaded_rvec_difference_stage1 = self.vector3_to_array(data.rvec_difference_stage1)
-                self.loaded_tvec_difference_stage1 = self.vector3_to_array(data.tvec_difference_stage1)
-                self.loaded_tvec_difference_stage1[1]+=0.03
-                # --- Load ideal pose differnece information from file
-                self.loaded_rvec_difference = self.vector3_to_array(data.rvec_difference_stage2)
-                self.loaded_tvec_difference = self.vector3_to_array(data.tvec_difference_stage2)
-                
-                self.du_converge_TH = data.ibvs_parameters.du_converge_th
-                self.dv_converge_TH = data.ibvs_parameters.dv_converge_th
-                self.iteration_limit = data.ibvs_parameters.iteration_limit
-                self.Ki = data.ibvs_parameters.Ki
-                # Compliance controller parameters
-                self.F_d_set1 = data.compliance_control_parameters.F_d_set1
-                self.F_d_set2 = data.compliance_control_parameters.F_d_set2
-                self.Kc = data.compliance_control_parameters.Kc
-                self.initial_pose=data.initial
-                #self.tran0 = np.array([2.15484,1.21372,0.25766])
-                #self.rot0 = rox.q2R([0.02110, -0.03317, 0.99922, -0.00468])
-                self.step_size_min = data.ibvs_parameters.step_size_min
-            except Exception as err:
-                rospy.loginfo("Input values for placement controller are invalid")
-                feedback=PlacementStepFeedback()
-                
-                feedback.error_msg="Input values are invalid"
-                self.goal_handle.publish_feedback(feedback)
-                self.goal_handle.set_aborted()
-                
-                
-                
-            self.move_to_initial_pose()
-            self.pbvs_to_stage1()
-            self.ibvs_placement()
-            self.final_adjustment()
-            self.release_suction_cups()
-            res = ProcessStepResult()
-            res.state="Placement_complete"
+    def pointarray_to_array(self,data):
+        arr=np.empty((3,0))
+        arr_column=np.empty((3,0))
+        rospy.loginfo(str(len(data)))
+        for i in range(64):
+            arr_column[0]=data[i].x
+            arr_column[1]=data[i].y
+            arr_column[2]=data[i].z
+            #arr_column[[data[i].x],[data[i].y],[data[i].z]]
             
+            np.c_[arr,arr_column]
+        #return np.asmatrix(arr,float)
+        return arr
+                
+        
+    def vector3_to_array(self,data):
+        '''arr=np.empty(3)
+        arr[0]=data.x
+        arr[1]=data.y
+        arr[2]=data.z
+        '''
+        arr=[]
+        
+        arr.append(float(data.x))
+        arr.append(float(data.y))
+        arr.append(float(data.z))
+        rospy.loginfo(str(arr))
+        return arr
     
-            self.goal_handle.set_succeeded(res)
+    #NOT FUNCTIONING
+    def aruco_dicts(self,aruco_dict_str):
+        aruco_dicts=set()
+        aruco_dicts.add(aruco_dict_str)
+        if not hasattr(cv2.aruco, next(iter(aruco_dicts))):
+            raise ValueError("Invalid aruco-dict value")
+        aruco_dict_id=getattr(cv2.aruco, next(iter(aruco_dicts)))
+        aruco_dict = cv2.aruco.Dictionary_get(aruco_dict_id)
+        return aruco_dict
+        
+    def single_camera_placement(self,data,camera_1_ground,camera_1_place):
+        #try:
+        self.dt = data.ibvs_parameters.IBVSdt
+        self.iteration=0
+        #aruco_dict_panel=self.aruco_dicts(camera_1_place.dictionary)
+        #aruco_dict_ground=self.aruco_dicts(camera_1_ground.dictionary)
+        aruco_dict_panel = cv2.aruco.Dictionary_get(cv2.aruco.DICT_ARUCO_ORIGINAL)
+        aruco_dict_ground = cv2.aruco.Dictionary_get(cv2.aruco.DICT_ARUCO_ORIGINAL)
+        self.board_panel = cv2.aruco.GridBoard_create(camera_1_place.markersX, camera_1_place.markersY, camera_1_place.markerLength, camera_1_place.markerSpacing, aruco_dict_panel, camera_1_place.firstMarker)
+        self.board_ground = cv2.aruco.GridBoard_create(camera_1_ground.markersX, camera_1_ground.markersY, camera_1_ground.markerLength, camera_1_ground.markerSpacing, aruco_dict_ground, camera_1_ground.firstMarker)
+        
+        
+        
+        self.loaded_object_points_ground_in_panel_system_stage_2 = self.pointarray_to_array(data.point_difference_stage2)
+        # --- Load ideal pose differnece information from file
+        self.loaded_rvec_difference_stage1 = self.vector3_to_array(data.rvec_difference_stage1)
+        self.loaded_tvec_difference_stage1 = self.vector3_to_array(data.tvec_difference_stage1)
+        self.loaded_tvec_difference_stage1[1]+=0.03
+        # --- Load ideal pose differnece information from file
+        self.loaded_rvec_difference = self.vector3_to_array(data.rvec_difference_stage2)
+        self.loaded_tvec_difference = self.vector3_to_array(data.tvec_difference_stage2)
+        
+        self.du_converge_TH = data.ibvs_parameters.du_converge_th
+        self.dv_converge_TH = data.ibvs_parameters.dv_converge_th
+        self.iteration_limit = data.ibvs_parameters.iteration_limit
+        self.Ki = data.ibvs_parameters.Ki
+        # Compliance controller parameters
+        self.F_d_set1 = data.compliance_control_parameters.F_d_set1
+        self.F_d_set2 = data.compliance_control_parameters.F_d_set2
+        self.Kc = data.compliance_control_parameters.Kc
+        self.initial_pose=data.initial
+        #self.tran0 = np.array([2.15484,1.21372,0.25766])
+        #self.rot0 = rox.q2R([0.02110, -0.03317, 0.99922, -0.00468])
+        self.step_size_min = data.ibvs_parameters.step_size_min
+        '''except Exception as err:
+            rospy.loginfo("Input values for placement controller are invalid"+str(err))
+            feedback=PlacementStepFeedback()
             
+            feedback.error_msg="Input values are invalid"
+            self.goal_handle.publish_feedback(feedback)
+            self.goal_handle.set_aborted()
+        '''
             
-        def two_camera_placement(data,camera_1_ground,camera_1_place,camera_2_ground,camera_2_place):
-            self.dt = data.ibvs_parameters.IBVSdt
-            self.iteration=0
-            self.board_panel = cv2.aruco.GridBoard_create(camera_1_place.markersX, camera_1_place.markersY, camera_1_place.markerLength, camera_1_place.markerSpacing, camera_1_place.dictionary, camera_1_place.firstMarker)
-            self.board_ground = cv2.aruco.GridBoard_create(camera_1_ground.markersX, camera_1_ground.markersY, camera_1_ground.markerLength, camera_1_ground.markerSpacing, camera_1_ground.dictionary, camera_1_ground.firstMarker)
-            self.board_panel2 = cv2.aruco.GridBoard_create(camera_2_place.markersX, camera_2_place.markersY, camera_2_place.markerLength, camera_2_place.markerSpacing, camera_2_place.dictionary, camera_2_place.firstMarker)
-            self.board_ground2 = cv2.aruco.GridBoard_create(camera_2_ground.markersX, camera_2_ground.markersY, camera_2_ground.markerLength, camera_2_ground.markerSpacing, camera_2_ground.dictionary, camera_2_ground.firstMarker)
-            self.loaded_object_points_ground_in_panel_system_stage_2 = self.pointarray_to_array(data.point_difference_stage2)
-            # --- Load ideal pose differnece information from file
-            self.loaded_rvec_difference_stage1 = self.vector3_to_array(data.rvec_difference_stage1)
-            self.loaded_tvec_difference_stage1 = self.vector3_to_array(data.tvec_difference_stage1)
-            self.loaded_tvec_difference_stage1[1]+=0.03
-            # --- Load ideal pose differnece information from file
-            self.loaded_rvec_difference = self.vector3_to_array(data.rvec_difference_stage2)
-            self.loaded_tvec_difference = self.vector3_to_array(data.tvec_difference_stage2)
-            
-            self.du_converge_TH = data.ibvs_parameters.du_converge_th
-            self.dv_converge_TH = data.ibvs_parameters.dv_converge_th
-            self.iteration_limit = data.ibvs_parameters.iteration_limit
-            self.Ki = data.ibvs_parameters.Ki
-            # Compliance controller parameters
-            self.F_d_set1 = data.compliance_control_parameters.F_d_set1
-            self.F_d_set2 = data.compliance_control_parameters.F_d_set2
-            self.Kc = data.compliance_control_parameters.Kc
-            self.initial_pose=data.initial
-            #self.tran0 = np.array([2.15484,1.21372,0.25766])
-            #self.rot0 = rox.q2R([0.02110, -0.03317, 0.99922, -0.00468])
-            self.step_size_min = data.ibvs_parameters.step_size_min
-            self.move_to_initial_pose()
-            #self.pbvs_to_stage1()
-            #self.ibvs_placement()
-            self.final_adjustment()
-            self.release_suction_cups()
-            res = ProcessStepResult()
-            res.state="Placement_complete"
-            self.goal_handle.set_succeeded(res)
+        
+        #self.move_to_initial_pose()
+        self.pbvs_to_stage1()
+        self.ibvs_placement()
+        self.final_adjustment()
+        self.release_suction_cups()
+        res = ProcessStepResult()
+        res.state="Placement_complete"
+        
+
+        self.goal_handle.set_succeeded(res)
+        
+        
+    def two_camera_placement(self,data,camera_1_ground,camera_1_place,camera_2_ground,camera_2_place):
+        self.dt = data.ibvs_parameters.IBVSdt
+        self.iteration=0
+        self.board_panel = cv2.aruco.GridBoard_create(camera_1_place.markersX, camera_1_place.markersY, camera_1_place.markerLength, camera_1_place.markerSpacing, camera_1_place.dictionary, camera_1_place.firstMarker)
+        self.board_ground = cv2.aruco.GridBoard_create(camera_1_ground.markersX, camera_1_ground.markersY, camera_1_ground.markerLength, camera_1_ground.markerSpacing, camera_1_ground.dictionary, camera_1_ground.firstMarker)
+        self.board_panel2 = cv2.aruco.GridBoard_create(camera_2_place.markersX, camera_2_place.markersY, camera_2_place.markerLength, camera_2_place.markerSpacing, camera_2_place.dictionary, camera_2_place.firstMarker)
+        self.board_ground2 = cv2.aruco.GridBoard_create(camera_2_ground.markersX, camera_2_ground.markersY, camera_2_ground.markerLength, camera_2_ground.markerSpacing, camera_2_ground.dictionary, camera_2_ground.firstMarker)
+        self.loaded_object_points_ground_in_panel_system_stage_2 = self.pointarray_to_array(data.point_difference_stage2)
+        # --- Load ideal pose differnece information from file
+        self.loaded_rvec_difference_stage1 = self.vector3_to_array(data.rvec_difference_stage1)
+        self.loaded_tvec_difference_stage1 = self.vector3_to_array(data.tvec_difference_stage1)
+        self.loaded_tvec_difference_stage1[1]+=0.03
+        # --- Load ideal pose differnece information from file
+        self.loaded_rvec_difference = self.vector3_to_array(data.rvec_difference_stage2)
+        self.loaded_tvec_difference = self.vector3_to_array(data.tvec_difference_stage2)
+        
+        self.du_converge_TH = data.ibvs_parameters.du_converge_th
+        self.dv_converge_TH = data.ibvs_parameters.dv_converge_th
+        self.iteration_limit = data.ibvs_parameters.iteration_limit
+        self.Ki = data.ibvs_parameters.Ki
+        # Compliance controller parameters
+        self.F_d_set1 = data.compliance_control_parameters.F_d_set1
+        self.F_d_set2 = data.compliance_control_parameters.F_d_set2
+        self.Kc = data.compliance_control_parameters.Kc
+        self.initial_pose=data.initial
+        #self.tran0 = np.array([2.15484,1.21372,0.25766])
+        #self.rot0 = rox.q2R([0.02110, -0.03317, 0.99922, -0.00468])
+        self.step_size_min = data.ibvs_parameters.step_size_min
+        self.move_to_initial_pose()
+        #self.pbvs_to_stage1()
+        #self.ibvs_placement()
+        self.final_adjustment()
+        self.release_suction_cups()
+        res = ProcessStepResult()
+        res.state="Placement_complete"
+        self.goal_handle.set_succeeded(res)
             
             
             
