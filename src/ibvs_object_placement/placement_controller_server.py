@@ -35,12 +35,12 @@ class PlacementControllerServer(object):
             
         rospy.loginfo(goal.get_goal_status())
         
-        res = PlacementStepResult()
-        res.state=self.controller.state
-        res.target=self.controller.current_target if self.controller.current_target is not None else ""
-        res.payload=self.controller.current_payload if self.controller.current_payload is not None else ""
+        #res = PlacementStepResult()
+        #res.state=self.controller.state
+        #res.target=self.controller.current_target if self.controller.current_target is not None else ""
+        #res.payload=self.controller.current_payload if self.controller.current_payload is not None else ""
     
-        goal.set_succeeded(res)
+        #goal.set_succeeded(res)
         
             
 def placement_controller_server_main():

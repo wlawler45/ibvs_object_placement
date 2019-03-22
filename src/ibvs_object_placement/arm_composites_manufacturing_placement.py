@@ -172,10 +172,10 @@ class PlacementController(object):
     def fill_camera_data(self,ros_data):
         self.ros_data=ros_data
         camMatrix=np.reshape(ros_data.K,(3,3))
-        distCoeffs=np.array(ros_data.D)
-        if len(distCoeffs) < 4:
-            distCoeffs=np.array([[0,0,0,0,0]])
-        self.CamParam.distCoeffs=distCoeffs
+        distCoeffs=np.array([ros_data.D])
+        #if len(distCoeffs[0]) < 4:
+        #    distCoeffs=np.array([[0,0,0,0,0]])
+        self.CamParam.distCoeff=distCoeffs
         self.CamParam.camMatrix=camMatrix
         
     
@@ -256,7 +256,9 @@ class PlacementController(object):
         objPoints, imgPoints 	=	aruco.getBoardObjectAndImagePoints(board, corners, ids)
         objPoints = objPoints.reshape([objPoints.shape[0],3])
         imgPoints = imgPoints.reshape([imgPoints.shape[0],2])
-        
+        rospy.loginfo("in get_pose")
+        rospy.loginfo(str(CamParam.camMatrix))
+        rospy.loginfo(str(CamParam.distCoeff))
         #Get pose of both ground and panel markers from detected corners        
         retVal, rvec, tvec = cv2.solvePnP(objPoints, imgPoints, CamParam.camMatrix, CamParam.distCoeff)
         Rca, b = cv2.Rodrigues(rvec)
@@ -265,6 +267,14 @@ class PlacementController(object):
     
 
     def image_jacobian_gen(self, result, corners, ids, CamParam, board_ground,board_panel,id_start_ground, id_board_ground_size, tag_ground_size, loaded_object_points_ground_in_panel_system, display_window):
+
+        rospy.loginfo(str(id_start_ground))
+        rospy.loginfo(str(id_board_ground_size))
+        rospy.loginfo(str(tag_ground_size))
+        rospy.loginfo(str(corners)) #float32
+        rospy.loginfo(str(board_ground))  
+        rospy.loginfo(str(board_panel)) 
+
         idx_max = 180
         UV = np.zeros([idx_max,8])
         P = np.zeros([idx_max,3])
@@ -274,7 +284,7 @@ class PlacementController(object):
         f_hat_v = CamParam.camMatrix[1][1]
         f_0_u = CamParam.camMatrix[0][2]
         f_0_v = CamParam.camMatrix[1][2]
-    
+        
         imgPoints_ground, rvec_ground, tvec_ground, Rca_ground, b_ground = self.get_pose(board_ground, corners, ids, CamParam)
         imgPoints_panel, rvec_panel, tvec_panel, Rca_panel, b_panel = self.get_pose(board_panel, corners, ids, CamParam)
         
@@ -285,11 +295,16 @@ class PlacementController(object):
                 corners_ground.append(i_corners)
             else:
                 corners_panel.append(i_corners)
-    
-                
+        #rospy.loginfo(str(id_start_ground))
+        rospy.loginfo(str(tag_ground_size))
+        #rospy.loginfo(str(ids))
+        #rospy.loginfo(str(corners))
+        #rospy.loginfo(str(corners_ground))  
+        #rospy.loginfo(str(corners_panel))        
         rvec_all_markers_ground, tvec_all_markers_ground, _ = aruco.estimatePoseSingleMarkers(corners_ground, tag_ground_size, CamParam.camMatrix, CamParam.distCoeff)
         rvec_all_markers_panel, tvec_all_markers_panel, _ = aruco.estimatePoseSingleMarkers(corners_panel, 0.025, CamParam.camMatrix, CamParam.distCoeff)
-        
+        #rospy.loginfo(str(tvec_all_markers_ground))
+        #rospy.loginfo(str(tvec_all_markers_panel))
         tvec_all=np.concatenate((tvec_all_markers_ground,tvec_all_markers_panel),axis=0)
         
         
@@ -308,7 +323,11 @@ class PlacementController(object):
     
         dutmp = []
         dvtmp = []
-        
+        rospy.loginfo(str(rvec_panel))
+        rospy.loginfo(str(tvec_panel))
+        rospy.loginfo(str(loaded_object_points_ground_in_panel_system.transpose()))
+        rospy.loginfo(str(CamParam.camMatrix))
+        rospy.loginfo(str(CamParam.distCoeff))
         #Pixel estimates of the ideal ground tag location
         reprojected_imagePoints_ground_2, jacobian2	=	cv2.projectPoints(	loaded_object_points_ground_in_panel_system.transpose(), rvec_panel, tvec_panel, CamParam.camMatrix, CamParam.distCoeff)
         reprojected_imagePoints_ground_2 = reprojected_imagePoints_ground_2.reshape([reprojected_imagePoints_ground_2.shape[0],2])
@@ -420,14 +439,19 @@ class PlacementController(object):
         # Estimate Poses  
         imgPoints_ground,rvec_ground, tvec_ground, Rca_ground, b_ground = self.get_pose(self.board_ground, corners, ids, self.CamParam)
         imgPoints_panel,rvec_panel, tvec_panel, Rca_panel, b_panel = self.get_pose(self.board_panel, corners, ids, self.CamParam)
-        
+        rospy.loginfo("camera params")
+        rospy.loginfo(str(self.CamParam.distCoeff))
+        rospy.loginfo(str(self.CamParam.camMatrix))
         observed_tvec_difference = tvec_ground-tvec_panel
         observed_rvec_difference = rvec_ground-rvec_panel
         rospy.loginfo(str(type(observed_tvec_difference)))
         rospy.loginfo("============== Difference in pose difference in nest position")
+        rospy.loginfo(str(observed_tvec_difference))
+        rospy.loginfo(str(observed_rvec_difference))
+        
         tvec_err = self.loaded_tvec_difference_stage1-observed_tvec_difference
         rvec_err = self.loaded_rvec_difference_stage1-observed_rvec_difference 
-        rospy.loginfo("tvec difference: "+str(tvec_err[0]) +" " +str(tvec_err[1])+" "+str(tvec_err[2]))
+        rospy.loginfo("rvec difference: %f, %f, %f",tvec_err[0],tvec_err[1],tvec_err[2])
         rospy.loginfo("rvec difference: %f, %f, %f",rvec_err[0],rvec_err[1],rvec_err[2])
 
         # Adjustment
@@ -626,31 +650,38 @@ class PlacementController(object):
         rospy.loginfo("iteration: %f",self.iteration)
         
     def pointarray_to_array(self,data):
-        arr=np.empty((3,0))
-        arr_column=np.empty((3,0))
-        rospy.loginfo(str(len(data)))
-        for i in range(64):
-            arr_column[0]=data[i].x
-            arr_column[1]=data[i].y
-            arr_column[2]=data[i].z
-            #arr_column[[data[i].x],[data[i].y],[data[i].z]]
-            
-            np.c_[arr,arr_column]
+        arr=np.zeros((3,len(data)))
+        #arr_column=np.empty((3,0))
+        
+        for i in range(len(data)):
+            #arr_column[0]=data[i].x
+            #arr_column[1]=data[i].y
+            #arr_column[2]=data[i].z
+            arr_column=np.array([[data[i].x],[data[i].y],[data[i].z]])
+            #rospy.loginfo(str(arr_column))
+            arr[:,i]=arr_column.reshape([3,])
+            #rospy.loginfo(str(arr))
         #return np.asmatrix(arr,float)
+        rospy.loginfo(str(arr))
         return arr
                 
         
     def vector3_to_array(self,data):
-        '''arr=np.empty(3)
+        arr =np.asarray( [[data.x],[data.y],[data.z]]) 
+        '''
+        arr=np.empty(3)
         arr[0]=data.x
         arr[1]=data.y
         arr[2]=data.z
-        '''
+        
         arr=[]
         
         arr.append(float(data.x))
         arr.append(float(data.y))
         arr.append(float(data.z))
+        '''
+        rospy.loginfo(str(arr))
+        #arr.reshape([3,1])
         rospy.loginfo(str(arr))
         return arr
     
@@ -673,10 +704,24 @@ class PlacementController(object):
         aruco_dict_panel = cv2.aruco.Dictionary_get(cv2.aruco.DICT_ARUCO_ORIGINAL)
         aruco_dict_ground = cv2.aruco.Dictionary_get(cv2.aruco.DICT_ARUCO_ORIGINAL)
         self.board_panel = cv2.aruco.GridBoard_create(camera_1_place.markersX, camera_1_place.markersY, camera_1_place.markerLength, camera_1_place.markerSpacing, aruco_dict_panel, camera_1_place.firstMarker)
+        rospy.loginfo('=-======================================================')   
+        rospy.loginfo(str(camera_1_place.markersX))
+        rospy.loginfo(str(camera_1_place.markersY))
+        rospy.loginfo(str(camera_1_place.markerLength))
+        rospy.loginfo(str(camera_1_place.markerSpacing))
+        rospy.loginfo(str(camera_1_place.firstMarker))
         self.board_ground = cv2.aruco.GridBoard_create(camera_1_ground.markersX, camera_1_ground.markersY, camera_1_ground.markerLength, camera_1_ground.markerSpacing, aruco_dict_ground, camera_1_ground.firstMarker)
+        rospy.loginfo(str(camera_1_ground.markersX))
+        rospy.loginfo(str(camera_1_ground.markersY))
+        rospy.loginfo(str(camera_1_ground.markerLength))
+        rospy.loginfo(str(camera_1_ground.markerSpacing))
+        rospy.loginfo(str(camera_1_ground.firstMarker))
+
         
-        
-        
+        self.id_start_ground=camera_1_ground.firstMarker
+        self.id_board_row_ground=camera_1_ground.markersX
+        self.id_board_col_ground=camera_1_ground.markersY
+        self.tag_ground_size=camera_1_ground.markerLength
         self.loaded_object_points_ground_in_panel_system_stage_2 = self.pointarray_to_array(data.point_difference_stage2)
         # --- Load ideal pose differnece information from file
         self.loaded_rvec_difference_stage1 = self.vector3_to_array(data.rvec_difference_stage1)
@@ -708,12 +753,12 @@ class PlacementController(object):
         '''
             
         
-        #self.move_to_initial_pose()
+        self.move_to_initial_pose()
         self.pbvs_to_stage1()
         self.ibvs_placement()
         self.final_adjustment()
         self.release_suction_cups()
-        res = ProcessStepResult()
+        res = PlacementStepResult()
         res.state="Placement_complete"
         
 

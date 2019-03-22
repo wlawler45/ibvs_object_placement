@@ -72,9 +72,9 @@ def main():
     initial_place.orientation.y= 0.99922
     initial_place.orientation.z=-0.00468
     placement_command.initial=initial_place
-    
-    placement_goal.camera1ground=ArucoGridboard(4,4,0.04,0.075,str(aruco_dict),32)
-    placement_goal.camera1place=ArucoGridboard(8,3,0.025,0.075,str(aruco_dict),80)
+    #CHECK THESE AGAIN
+    placement_goal.camera1ground=ArucoGridboard(4,4,0.04,0.0075,str(aruco_dict),32)
+    placement_goal.camera1place=ArucoGridboard(8,3,0.025,0.0075,str(aruco_dict),80)
     '''   
     elif(self.current_payload=="leeward_tip_panel"):
         placement_command.rvec_difference_stage1=wrap_vector3(loadmat('/home/rpi-cats/Desktop/DJ/Ideal Position/Panel2_Cam_636_object_points_ground_tag_in_panel_frame_Offset_In_Nest.mat')['rvec_difference'])
