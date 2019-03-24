@@ -155,6 +155,7 @@ class PlacementController(object):
         #self.FTdata_0 = self.FTdata
         #self.FTdata_0est = self.compute_ft_est()
         self.result = self.take_image()
+        #TODO: replace with trajopt code
         self.client = actionlib.SimpleActionClient("joint_trajectory_action", FollowJointTrajectoryAction)
         # IBVS parameters
         self.du_converge_TH = None
@@ -416,6 +417,7 @@ class PlacementController(object):
         #pose_target2 = rox.Transform(rot0, tran0)        
         ##Execute movement to set location
         rospy.loginfo("Executing initial path ====================")
+        #TODO: Change to trajopt planning
         self.controller_commander.compute_cartesian_path_and_move(self.initial_pose, avoid_collisions=False)
     
     def pbvs_to_stage1(self):
@@ -451,7 +453,7 @@ class PlacementController(object):
         dx = np.array([0,0,0, -tvec_err[0], tvec_err[1],tvec_err[2]])*0.75
         joints_vel = QP_abbirb6640(np.array(current_joint_angles).reshape(6, 1),np.array(dx))
         goal = self.trapezoid_gen(np.array(current_joint_angles) + joints_vel.dot(1),np.array(current_joint_angles),0.25,np.array(dx))
-        
+        #TODO replace with trajopt code
         self.client.wait_for_server()
         self.client.send_goal(goal)
         self.client.wait_for_result()
@@ -491,7 +493,7 @@ class PlacementController(object):
         dx = np.array([0,0,0, -tvec_err[0], tvec_err[1],0])
         joints_vel = QP_abbirb6640(np.array(current_joint_angles).reshape(6, 1),np.array(dx))
         goal = self.trapezoid_gen(np.array(current_joint_angles) + joints_vel.dot(1),np.array(current_joint_angles),0.25,np.array(dx))
-        
+        #TODO replace with trajopt code
         self.client.wait_for_server()
         self.client.send_goal(goal)
         self.client.wait_for_result()
@@ -536,6 +538,7 @@ class PlacementController(object):
         pose_target2.p[2] += 0.25
     
         rospy.loginfo("============ Lift gripper...")
+        #TODO: Change to trajopt planning
         self.controller_commander.compute_cartesian_path_and_move(pose_target2, avoid_collisions=False)
         #s=ProcessState()
         #s.state="place_set"
@@ -626,7 +629,7 @@ class PlacementController(object):
     
                 goal = self.trapezoid_gen(np.array(current_joint_angles) + joints_vel.dot(self.dt),np.array(current_joint_angles),0.25,np.array(dx))
     
-              
+                #TODO: replace with trajopt code
                 self.client.wait_for_server()     
                 self.client.send_goal(goal)
                 self.client.wait_for_result()
