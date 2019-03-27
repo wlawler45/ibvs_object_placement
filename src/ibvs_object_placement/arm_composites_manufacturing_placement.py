@@ -154,7 +154,7 @@ class PlacementController(object):
         self.ft_flag = False
         #self.FTdata_0 = self.FTdata
         #self.FTdata_0est = self.compute_ft_est()
-        self.result = self.take_image()
+        #self.result = self.take_image()
         #TODO: replace with trajopt code
         self.client = actionlib.SimpleActionClient("joint_trajectory_action", FollowJointTrajectoryAction)
         # IBVS parameters
