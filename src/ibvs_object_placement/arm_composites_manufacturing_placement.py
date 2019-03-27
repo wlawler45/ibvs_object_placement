@@ -736,7 +736,7 @@ class PlacementController(object):
             res.error_msg=str(err)
             #feedback.error_msg=
             #self.goal_handle.publish_feedback(feedback)
-            self.goal_handle.set_aborted(res)
+            self.goal_handle.set_aborted(str(err))
         
             
         try:
@@ -748,18 +748,18 @@ class PlacementController(object):
         except Exception as err:
             rospy.loginfo("Placement controller failed with error: "+str(err))
             #feedback=PlacementStepFeedback()
-            res = PlacementStepResult()
-            res.state="Error"
-            res.error_msg=str(err)
+            #res = PlacementStepResult()
+            #res.state="Error"
+            #res.error_msg=str(err)
             
-            self.goal_handle.set_aborted(res)
+            self.goal_handle.set_aborted(str(err))
             
-        res = PlacementStepResult()
-        res.state="Placement_complete"
-        res.error_msg=""
+        #res = PlacementStepResult()
+        #res.state="Placement_complete"
+        #res.error_msg=""
         
 
-        self.goal_handle.set_succeeded(res)
+        self.goal_handle.set_succeeded(None)
         
         
     def two_camera_placement(self,data,camera_1_ground,camera_1_place,camera_2_ground,camera_2_place):
@@ -795,9 +795,9 @@ class PlacementController(object):
         #self.ibvs_placement()
         self.final_adjustment()
         self.release_suction_cups()
-        res = ProcessStepResult()
-        res.state="Placement_complete"
-        self.goal_handle.set_succeeded(res)
+        #res = ProcessStepResult()
+        #res.state="Placement_complete"
+        self.goal_handle.set_succeeded(None)
             
             
             
