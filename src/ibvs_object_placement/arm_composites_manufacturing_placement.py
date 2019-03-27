@@ -691,60 +691,72 @@ class PlacementController(object):
         return aruco_dict
         
     def single_camera_placement(self,data,camera_1_ground,camera_1_place):
-        #try:
-        self.dt = data.ibvs_parameters.IBVSdt
-        self.iteration=0
-        #aruco_dict_panel=self.aruco_dicts(camera_1_place.dictionary)
-        #aruco_dict_ground=self.aruco_dicts(camera_1_ground.dictionary)
-        aruco_dict_panel = self.aruco_dicts(camera_1_place.dictionary)
-        
-        aruco_dict_ground = self.aruco_dicts(camera_1_ground.dictionary)
-        self.board_panel = cv2.aruco.GridBoard_create(camera_1_place.markersX, camera_1_place.markersY, camera_1_place.markerLength, camera_1_place.markerSpacing, aruco_dict_panel, camera_1_place.firstMarker)
-        
-        self.board_ground = cv2.aruco.GridBoard_create(camera_1_ground.markersX, camera_1_ground.markersY, camera_1_ground.markerLength, camera_1_ground.markerSpacing, aruco_dict_ground, camera_1_ground.firstMarker)
-        
-        self.id_start_ground=camera_1_ground.firstMarker
-        self.id_board_row_ground=camera_1_ground.markersX
-        self.id_board_col_ground=camera_1_ground.markersY
-        self.tag_ground_size=camera_1_ground.markerLength
-        self.loaded_object_points_ground_in_panel_system_stage_2 = self.pointarray_to_array(data.point_difference_stage2)
-        # --- Load ideal pose difference information from file
-        self.loaded_rvec_difference_stage1 = self.vector3_to_array(data.rvec_difference_stage1)
-        self.loaded_tvec_difference_stage1 = self.vector3_to_array(data.tvec_difference_stage1)
-        self.loaded_tvec_difference_stage1[1]+=0.03
-        # --- Load ideal pose difference information from file
-        self.loaded_rvec_difference = self.vector3_to_array(data.rvec_difference_stage2)
-        self.loaded_tvec_difference = self.vector3_to_array(data.tvec_difference_stage2)
-        
-        self.du_converge_TH = data.ibvs_parameters.du_converge_th
-        self.dv_converge_TH = data.ibvs_parameters.dv_converge_th
-        self.iteration_limit = data.ibvs_parameters.iteration_limit
-        self.Ki = data.ibvs_parameters.Ki
-        # Compliance controller parameters
-        self.F_d_set1 = data.compliance_control_parameters.F_d_set1
-        self.F_d_set2 = data.compliance_control_parameters.F_d_set2
-        self.Kc = data.compliance_control_parameters.Kc
-        self.initial_pose=data.initial
-        #self.tran0 = np.array([2.15484,1.21372,0.25766])
-        #self.rot0 = rox.q2R([0.02110, -0.03317, 0.99922, -0.00468])
-        self.step_size_min = data.ibvs_parameters.step_size_min
-        '''except Exception as err:
-            rospy.loginfo("Input values for placement controller are invalid"+str(err))
-            feedback=PlacementStepFeedback()
+        try:
+            self.dt = data.ibvs_parameters.IBVSdt
+            self.iteration=0
+            #aruco_dict_panel=self.aruco_dicts(camera_1_place.dictionary)
+            #aruco_dict_ground=self.aruco_dicts(camera_1_ground.dictionary)
+            aruco_dict_panel = self.aruco_dicts(camera_1_place.dictionary)
             
-            feedback.error_msg="Input values are invalid"
-            self.goal_handle.publish_feedback(feedback)
-            self.goal_handle.set_aborted()
-        '''
+            aruco_dict_ground = self.aruco_dicts(camera_1_ground.dictionary)
+            self.board_panel = cv2.aruco.GridBoard_create(camera_1_place.markersX, camera_1_place.markersY, camera_1_place.markerLength, camera_1_place.markerSpacing, aruco_dict_panel, camera_1_place.firstMarker)
             
+            self.board_ground = cv2.aruco.GridBoard_create(camera_1_ground.markersX, camera_1_ground.markersY, camera_1_ground.markerLength, camera_1_ground.markerSpacing, aruco_dict_ground, camera_1_ground.firstMarker)
+            
+            self.id_start_ground=camera_1_ground.firstMarker
+            self.id_board_row_ground=camera_1_ground.markersX
+            self.id_board_col_ground=camera_1_ground.markersY
+            self.tag_ground_size=camera_1_ground.markerLength
+            self.loaded_object_points_ground_in_panel_system_stage_2 = self.pointarray_to_array(data.point_difference_stage2)
+            # --- Load ideal pose difference information from file
+            self.loaded_rvec_difference_stage1 = self.vector3_to_array(data.rvec_difference_stage1)
+            self.loaded_tvec_difference_stage1 = self.vector3_to_array(data.tvec_difference_stage1)
+            self.loaded_tvec_difference_stage1[1]+=0.03
+            # --- Load ideal pose difference information from file
+            self.loaded_rvec_difference = self.vector3_to_array(data.rvec_difference_stage2)
+            self.loaded_tvec_difference = self.vector3_to_array(data.tvec_difference_stage2)
+            
+            self.du_converge_TH = data.ibvs_parameters.du_converge_th
+            self.dv_converge_TH = data.ibvs_parameters.dv_converge_th
+            self.iteration_limit = data.ibvs_parameters.iteration_limit
+            self.Ki = data.ibvs_parameters.Ki
+            # Compliance controller parameters
+            self.F_d_set1 = data.compliance_control_parameters.F_d_set1
+            self.F_d_set2 = data.compliance_control_parameters.F_d_set2
+            self.Kc = data.compliance_control_parameters.Kc
+            self.initial_pose=data.initial
+            #self.tran0 = np.array([2.15484,1.21372,0.25766])
+            #self.rot0 = rox.q2R([0.02110, -0.03317, 0.99922, -0.00468])
+            self.step_size_min = data.ibvs_parameters.step_size_min
+        except Exception as err:
+            rospy.loginfo("Input values for placement controller are invalid "+str(err))
+            #feedback=PlacementStepFeedback()
+            res = PlacementStepResult()
+            res.state="Error"
+            res.error_msg=str(err)
+            #feedback.error_msg=
+            #self.goal_handle.publish_feedback(feedback)
+            self.goal_handle.set_aborted(res)
         
-        self.move_to_initial_pose()
-        self.pbvs_to_stage1()
-        self.ibvs_placement()
-        self.final_adjustment()
-        self.release_suction_cups()
+            
+        try:
+            self.move_to_initial_pose()
+            self.pbvs_to_stage1()
+            self.ibvs_placement()
+            self.final_adjustment()
+            self.release_suction_cups()
+        except Exception as err:
+            rospy.loginfo("Placement controller failed with error: "+str(err))
+            #feedback=PlacementStepFeedback()
+            res = PlacementStepResult()
+            res.state="Error"
+            res.error_msg=str(err)
+            
+            self.goal_handle.set_aborted(res)
+            
         res = PlacementStepResult()
         res.state="Placement_complete"
+        res.error_msg=""
         
 
         self.goal_handle.set_succeeded(res)

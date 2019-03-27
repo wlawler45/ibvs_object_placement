@@ -11,8 +11,8 @@ industrial_payload_manager/ArucoGridboard camera2place
 ---
 #result definition
 string state
-
+string error_msg
 ---
 #feedback
-string error_msg
+
 
