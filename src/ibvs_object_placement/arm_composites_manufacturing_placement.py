@@ -135,6 +135,7 @@ class PlacementController(object):
         self.parameters.adaptiveThreshWinSizeStep=7
         # ================== Cam 636
         # --- Subscribe to Gripper camera node for image acquisition
+        #TODO: Take in camera names and make subscribers and triggers accordingly
         self.ros_gripper_2_img_sub = rospy.Subscriber('/gripper_camera_2/image', Image, self.object_commander.ros_raw_gripper_2_image_cb)
         self.ros_gripper_2_trigger = rospy.ServiceProxy('/gripper_camera_2/trigger', Trigger)
         
