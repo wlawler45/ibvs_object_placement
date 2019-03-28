@@ -422,7 +422,7 @@ class PlacementController(object):
         self.controller_commander.compute_cartesian_path_and_move(self.initial_pose, avoid_collisions=False)
     
     def pbvs_to_stage1(self):
-        
+        self.controller_commander.set_controller_mode(self.controller_commander.MODE_AUTO_TRAJECTORY, 0.7, [])
         self.take_image() 
         #Detect tag corners in aqcuired image using aruco
         corners, ids, _ = cv2.aruco.detectMarkers(self.result, self.aruco_dict, parameters=self.parameters)    
@@ -748,11 +748,11 @@ class PlacementController(object):
         except Exception as err:
             rospy.loginfo("Placement controller failed with error: "+str(err))
             #feedback=PlacementStepFeedback()
-            #res = PlacementStepResult()
-            #res.state="Error"
-            #res.error_msg=str(err)
+            res = PlacementStepResult()
+            res.state="Error"
+            res.error_msg=str(err)
             
-            self.goal_handle.set_aborted(str(err))
+            self.goal_handle.set_aborted(result=res)
             
         #res = PlacementStepResult()
         #res.state="Placement_complete"
