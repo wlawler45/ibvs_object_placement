@@ -740,11 +740,11 @@ class PlacementController(object):
         
             
         try:
-            self.move_to_initial_pose()
+            #self.move_to_initial_pose()
             self.pbvs_to_stage1()
             self.ibvs_placement()
             self.final_adjustment()
-            self.release_suction_cups()
+            #self.release_suction_cups()
         except Exception as err:
             rospy.loginfo("Placement controller failed with error: "+str(err))
             #feedback=PlacementStepFeedback()
@@ -806,11 +806,11 @@ class PlacementController(object):
 def main():
     rospy.init_node('Placement_Controller', anonymous=True)
     controller = PlacementController()
-    controller.move_to_initial_pose()
+    #controller.move_to_initial_pose()
     controller.pbvs_to_stage1()
     controller.ibvs_placement()
     controller.final_adjustment()
-    controller.release_suction_cups()    
+    #controller.release_suction_cups()    
 
 if __name__ == "__main__":
     main()
