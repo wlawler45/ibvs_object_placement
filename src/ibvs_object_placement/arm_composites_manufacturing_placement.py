@@ -337,7 +337,7 @@ class PlacementController(object):
                 
             height, width, channels = frame_with_markers_and_axis.shape
             cv2.imshow(display_window,cv2.resize(frame_with_markers_and_axis, (width/4, height/4)))
-            cv2.waitKey(.1)
+            cv2.waitKey(1)
             #Save
             #filename_image = "/home/rpi-cats/Desktop/DJ/Code/Images/Panel2_Acquisition_"+str(t1)+"_"+str(iteration)+".jpg"
             #scipy.misc.imsave(filename_image, frame_with_markers_and_axis)
@@ -752,9 +752,9 @@ class PlacementController(object):
             
         try:
             #self.move_to_initial_pose()
-            #self.pbvs_to_stage1(False)
+            self.pbvs_to_stage1(False)
             
-            #self.pbvs_to_stage1(True)
+            self.pbvs_to_stage1(True)
             self.ibvs_placement()
             self.final_adjustment()
             #self.release_suction_cups()
