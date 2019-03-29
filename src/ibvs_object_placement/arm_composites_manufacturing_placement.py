@@ -421,7 +421,7 @@ class PlacementController(object):
         #TODO: Change to trajopt planning
         self.controller_commander.compute_cartesian_path_and_move(self.initial_pose, avoid_collisions=False)
     
-    def pbvs_to_stage1(self):
+    def pbvs_to_stage1(self,with_lower):
         self.controller_commander.set_controller_mode(self.controller_commander.MODE_AUTO_TRAJECTORY, 0.7, [])
         self.take_image() 
         #Detect tag corners in aqcuired image using aruco
@@ -445,13 +445,17 @@ class PlacementController(object):
         
         tvec_err = self.loaded_tvec_difference_stage1-observed_tvec_difference
         rvec_err = self.loaded_rvec_difference_stage1-observed_rvec_difference 
-        rospy.loginfo("rvec difference: %f, %f, %f",tvec_err[0],tvec_err[1],tvec_err[2])
+        rospy.loginfo("tvec difference: %f, %f, %f",tvec_err[0],tvec_err[1],tvec_err[2])
         rospy.loginfo("rvec difference: %f, %f, %f",rvec_err[0],rvec_err[1],rvec_err[2])
-
+        
         # Adjustment
         rospy.loginfo("PBVS to initial Position ====================")
         current_joint_angles = self.controller_commander.get_current_joint_values()
-        dx = np.array([0,0,0, -tvec_err[0], tvec_err[1],tvec_err[2]])*0.75
+        if(with_lower):
+            dx = np.array([0,0,0, -tvec_err[0], tvec_err[1],tvec_err[2]])*0.75
+        else:
+            dx = np.array([0,0,rvec_err[2], -tvec_err[0], tvec_err[1],0])*0.75
+            #dx = np.array([-rvec_err[0], rvec_err[1],rvec_err[2], -tvec_err[0], tvec_err[1],0])*0.75
         joints_vel = QP_abbirb6640(np.array(current_joint_angles).reshape(6, 1),np.array(dx))
         goal = self.trapezoid_gen(np.array(current_joint_angles) + joints_vel.dot(1),np.array(current_joint_angles),0.25,np.array(dx))
         #TODO replace with trajopt code
@@ -731,6 +735,7 @@ class PlacementController(object):
         except Exception as err:
             rospy.loginfo("Input values for placement controller are invalid "+str(err))
             #feedback=PlacementStepFeedback()
+            traceback.print_exc()
             res = PlacementStepResult()
             res.state="Error"
             res.error_msg=str(err)
@@ -741,18 +746,20 @@ class PlacementController(object):
             
         try:
             #self.move_to_initial_pose()
-            self.pbvs_to_stage1()
+            self.pbvs_to_stage1(False)
+            self.pbvs_to_stage1(True)
             self.ibvs_placement()
             self.final_adjustment()
             #self.release_suction_cups()
         except Exception as err:
+            traceback.print_exc()
             rospy.loginfo("Placement controller failed with error: "+str(err))
             #feedback=PlacementStepFeedback()
             res = PlacementStepResult()
             res.state="Error"
             res.error_msg=str(err)
             
-            self.goal_handle.set_aborted(result=res)
+            self.goal_handle.set_aborted(res)
             
         #res = PlacementStepResult()
         #res.state="Placement_complete"
