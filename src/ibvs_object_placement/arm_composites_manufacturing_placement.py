@@ -337,7 +337,7 @@ class PlacementController(object):
                 
             height, width, channels = frame_with_markers_and_axis.shape
             cv2.imshow(display_window,cv2.resize(frame_with_markers_and_axis, (width/4, height/4)))
-            cv2.waitKey(1)
+            cv2.waitKey(.1)
             #Save
             #filename_image = "/home/rpi-cats/Desktop/DJ/Code/Images/Panel2_Acquisition_"+str(t1)+"_"+str(iteration)+".jpg"
             #scipy.misc.imsave(filename_image, frame_with_markers_and_axis)
@@ -423,48 +423,53 @@ class PlacementController(object):
     
     def pbvs_to_stage1(self,with_lower):
         self.controller_commander.set_controller_mode(self.controller_commander.MODE_AUTO_TRAJECTORY, 0.7, [])
-        self.take_image() 
-        #Detect tag corners in aqcuired image using aruco
-        corners, ids, _ = cv2.aruco.detectMarkers(self.result, self.aruco_dict, parameters=self.parameters)    
-        #Sort corners and ids according to ascending order of ids
-        #rospy.loginfo("tvec difference: %f, %f",corners,ids)
-        corners, ids = sort_corners(corners,ids)
-        
-        # Estimate Poses  
-        imgPoints_ground,rvec_ground, tvec_ground, Rca_ground, b_ground = self.get_pose(self.board_ground, corners, ids, self.CamParam)
-        imgPoints_panel,rvec_panel, tvec_panel, Rca_panel, b_panel = self.get_pose(self.board_panel, corners, ids, self.CamParam)
-        rospy.loginfo("camera params")
-        rospy.loginfo(str(self.CamParam.distCoeff))
-        rospy.loginfo(str(self.CamParam.camMatrix))
-        observed_tvec_difference = tvec_ground-tvec_panel
-        observed_rvec_difference = rvec_ground-rvec_panel
-        rospy.loginfo(str(type(observed_tvec_difference)))
-        rospy.loginfo("============== Difference in pose difference in nest position")
-        rospy.loginfo(str(observed_tvec_difference))
-        rospy.loginfo(str(observed_rvec_difference))
-        
-        tvec_err = self.loaded_tvec_difference_stage1-observed_tvec_difference
-        rvec_err = self.loaded_rvec_difference_stage1-observed_rvec_difference 
-        rospy.loginfo("tvec difference: %f, %f, %f",tvec_err[0],tvec_err[1],tvec_err[2])
-        rospy.loginfo("rvec difference: %f, %f, %f",rvec_err[0],rvec_err[1],rvec_err[2])
-        
-        # Adjustment
-        rospy.loginfo("PBVS to initial Position ====================")
-        current_joint_angles = self.controller_commander.get_current_joint_values()
-        if(with_lower):
-            dx = np.array([0,0,0, -tvec_err[0], tvec_err[1],tvec_err[2]])*0.75
-        else:
-            dx = np.array([0,0,rvec_err[2], -tvec_err[0], tvec_err[1],0])*0.75
-            #dx = np.array([-rvec_err[0], rvec_err[1],rvec_err[2], -tvec_err[0], tvec_err[1],0])*0.75
-        joints_vel = QP_abbirb6640(np.array(current_joint_angles).reshape(6, 1),np.array(dx))
-        goal = self.trapezoid_gen(np.array(current_joint_angles) + joints_vel.dot(1),np.array(current_joint_angles),0.25,np.array(dx))
-        #TODO replace with trajopt code
-        self.client.wait_for_server()
-        self.client.send_goal(goal)
-        self.client.wait_for_result()
-        res = self.client.get_result()
-        if (res.error_code != 0):
-            raise Exception("Trajectory execution returned error")
+         
+        tvec_err = np.array([1000,1000,1000])
+
+        while(np.linalg.norm(tvec_err) > 0.06):
+            
+            self.take_image() 
+            #Detect tag corners in aqcuired image using aruco
+            corners, ids, _ = cv2.aruco.detectMarkers(self.result, self.aruco_dict, parameters=self.parameters)    
+            #Sort corners and ids according to ascending order of ids
+            #rospy.loginfo("tvec difference: %f, %f",corners,ids)
+            corners, ids = sort_corners(corners,ids)
+            
+            # Estimate Poses  
+            imgPoints_ground,rvec_ground, tvec_ground, Rca_ground, b_ground = self.get_pose(self.board_ground, corners, ids, self.CamParam)
+            imgPoints_panel,rvec_panel, tvec_panel, Rca_panel, b_panel = self.get_pose(self.board_panel, corners, ids, self.CamParam)
+            rospy.loginfo("camera params")
+            rospy.loginfo(str(self.CamParam.distCoeff))
+            rospy.loginfo(str(self.CamParam.camMatrix))
+            observed_tvec_difference = tvec_ground-tvec_panel
+            observed_rvec_difference = rvec_ground-rvec_panel
+
+            tvec_err = self.loaded_tvec_difference_stage1-observed_tvec_difference
+            rvec_err = self.loaded_rvec_difference_stage1-observed_rvec_difference 
+            rospy.loginfo("tvec difference: %f, %f, %f",tvec_err[0],tvec_err[1],tvec_err[2])
+            rospy.loginfo("rvec difference: %f, %f, %f",rvec_err[0],rvec_err[1],rvec_err[2])
+
+            if(not with_lower):
+                tvec_err[2] = 0
+            else:
+                tvec_err[2] -= 0.04               
+            dx = np.array([0,0,0, -tvec_err[0], tvec_err[1],tvec_err[2]])*0.7
+            #dx = np.array([rvec_err[0],rvec_err[1],rvec_err[2], -tvec_err[0], tvec_err[1],tvec_err[2]])*0.7
+            # Adjustment
+            rospy.loginfo("PBVS to initial Position ====================")
+            current_joint_angles = self.controller_commander.get_current_joint_values()
+            
+            print dx
+
+            joints_vel = QP_abbirb6640(np.array(current_joint_angles).reshape(6, 1),np.array(dx))
+            goal = self.trapezoid_gen(np.array(current_joint_angles) + joints_vel.dot(1),np.array(current_joint_angles),0.25,np.array(dx))
+            #TODO replace with trajopt code
+            self.client.wait_for_server()
+            self.client.send_goal(goal)
+            self.client.wait_for_result()
+            res = self.client.get_result()
+            if (res.error_code != 0):
+                raise Exception("Trajectory execution returned error")
 
         rospy.loginfo("End of Initial Pose ====================")
         ### End of initial pose 
@@ -573,8 +578,9 @@ class PlacementController(object):
         #                   (2) Complaince control gain (Kc)
  
         #test = 0            
-      
+        
         ################################# BEGIN IBVS #################################
+        self.controller_commander.set_controller_mode(self.controller_commander.MODE_AUTO_TRAJECTORY, 0.7, [])
         step_size_min = self.step_size_min
         loaded_object_points_ground_in_panel_system = self.loaded_object_points_ground_in_panel_system_stage_2 
         du = 100.0
@@ -746,8 +752,9 @@ class PlacementController(object):
             
         try:
             #self.move_to_initial_pose()
-            self.pbvs_to_stage1(False)
-            self.pbvs_to_stage1(True)
+            #self.pbvs_to_stage1(False)
+            
+            #self.pbvs_to_stage1(True)
             self.ibvs_placement()
             self.final_adjustment()
             #self.release_suction_cups()
